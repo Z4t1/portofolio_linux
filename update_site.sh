@@ -1,50 +1,77 @@
 #!/bin/bash
 
-# --- VARIABLES ---
-# On force la date en Français et on récupère les infos
-DATE_MAJ=$(date '+%d %B %Y à %H:%M:%S')
+# Variables
+FICHIER_HTML="/var/www/html/index.html"
+HEURE=$(date "+%H:%M:%S")
+DATE=$(date "+%d/%m/%Y")
 IP=$(hostname -I | awk '{print $1}')
-DISK=$(df -h / | awk 'NR==2 {print $4}')
-USER=$(whoami)
+UPTIME=$(uptime -p)
 KERNEL=$(uname -r)
+DISK=$(df -h / | awk 'NR==2 {print $4}')
 
-# --- GÉNÉRATION HTML ---
-cat <<EOF > /home/admin-user/portfolio_dorian/index.html
+# Génération du HTML avec Style CSS
+cat <<EOF > $FICHIER_HTML
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Portfolio Auto | Dorian</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Dorian</title>
     <style>
-        body { background-color: #1a1a1a; color: white; font-family: sans-serif; padding-top: 50px; }
-        .card { background-color: #333; border: 1px solid #444; padding: 20px; border-radius: 10px; }
-        .highlight { color: #00d2ff; font-weight: bold; }
-        .footer { margin-top: 20px; border-top: 1px solid #555; padding-top: 10px; text-align: center; }
+        body {
+            background-color: #0d1117;
+            color: #00ff41;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { border-bottom: 2px solid #00ff41; padding-bottom: 10px; }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #00ff41;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .label { color: #8b949e; font-size: 0.8em; text-transform: uppercase; }
+        .value { font-size: 1.2em; font-weight: bold; margin-top: 5px; }
+        .footer { margin-top: 30px; font-size: 0.7em; color: #58a6ff; }
     </style>
 </head>
 <body>
+    <h1>📟 SERVER_STATUS: ONLINE</h1>
+    
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <h2 class="text-center mb-4">Admin Système : Dorian</h2>
-                    <p>IP Serveur : <span class="highlight">$IP</span></p>
-                    <p>Disque Libre : <span class="highlight">$DISK</span></p>
-                    <p>Kernel : <span class="highlight">$KERNEL</span></p>
-                    <p>Utilisateur Script : <span class="highlight">$USER</span></p>
-                    
-                    <div class="footer">
-                        <small>Dernière mise à jour auto :</small><br>
-                        <span style="font-size: 1.2em; color: #00d2ff;">$DATE_MAJ</span>
-                    </div>
-                </div>
-            </div>
+        <div class="card">
+            <div class="label">Date & Heure</div>
+            <div class="value">$DATE - $HEURE</div>
         </div>
+        <div class="card">
+            <div class="label">Adresse IP</div>
+            <div class="value">$IP</div>
+        </div>
+        <div class="card">
+            <div class="label">Espace Libre</div>
+            <div class="value">$DISK</div>
+        </div>
+        <div class="card">
+            <div class="label">Uptime</div>
+            <div class="value">$UPTIME</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Système: $KERNEL | Mis à jour automatiquement par Cron
     </div>
 </body>
 </html>
 EOF
-
-# --- COPIE DU FICHIER (SANS SUDO) ---
-cp /home/admin-user/portfolio_dorian/index.html /var/www/html/index.html
