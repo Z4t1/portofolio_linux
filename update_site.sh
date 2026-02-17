@@ -4,10 +4,10 @@
 # PORTFOLIO DORIAN - HERO IMMERSIF STYLE IRONHILL
 # Video background + Ornements gothiques + Galerie de tableaux
 # ====================================================================
-
 IP=$(hostname -I | awk '{print $1}')
 UPTIME=$(uptime -p)
 DISK=$(df -h / | awk 'NR==2 {print $4}')
+DISK_USED_PERCENT=$(df / | awk 'NR==2 {print int($5)}')
 
 cat <<'EOF' > /var/www/html/index.html
 <!DOCTYPE html>
@@ -714,15 +714,65 @@ cat <<'EOF' > /var/www/html/index.html
     </section>
 
     <!-- Dropdowns (même contenu qu'avant) -->
-    <div id="drop-sys" class="dropdown">
-        <div class="dropdown-content">
-            <h2>⚙️ Système</h2>
-            <p><strong>IP :</strong> $IP</p>
-            <p><strong>Uptime :</strong> $UPTIME</p>
-            <p><strong>Disque :</strong> $DISK</p>
-        </div>
-    </div>
+<div id="drop-sys" class="dropdown">
+    <div class="dropdown-content">
+        <h2>⚙️ Système</h2>
 
+        <!-- Horloge en temps réel -->
+        <p>
+            <strong>🕐 Heure :</strong> 
+            <span id="sys-time" style="color: var(--accent-gold);">--:--:--</span>
+        </p>
+
+        <!-- Infos statiques du bash -->
+        <p><strong>🌐 IP :</strong> $IP</p>
+        <p><strong>⏱️ Uptime :</strong> $UPTIME</p>
+        <p><strong>💾 Disque :</strong> $DISK</p>
+
+        <!-- Barre de disque visuelle -->
+        <div style="margin-top: 1.5rem;">
+            <p style="margin-bottom: 0.5rem;">
+                <strong>📊 Utilisation Disque :</strong>
+            </p>
+            <div style="
+                background: rgba(255,255,255,0.1);
+                border-radius: 10px;
+                height: 10px;
+                overflow: hidden;
+                border: 1px solid rgba(212,175,55,0.3);
+            ">
+                <div id="disk-bar" style="
+                    height: 100%;
+                    background: var(--gradient-gold);
+                    width: 0%;
+                    border-radius: 10px;
+                    transition: width 1s ease;
+                "></div>
+            </div>
+            <p id="disk-percent" style="
+                font-size: 0.8rem;
+                color: var(--text-secondary);
+                margin-top: 0.3rem;
+            ">Calcul...</p>
+        </div>
+
+        <!-- Système d'exploitation -->
+        <p style="margin-top: 1rem;">
+            <strong>🖥️ OS :</strong> Ubuntu 24.04 LTS
+        </p>
+
+        <!-- Dernière mise à jour -->
+        <p style="
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        ">
+            Dernière mise à jour : 
+            <span id="last-update">--</span>
+        </p>
+    </div>
+</div>
     <div id="drop-projets" class="dropdown">
         <div class="dropdown-content">
             <h2>✨ Œuvres</h2>
@@ -1052,6 +1102,67 @@ cat <<'EOF' > /var/www/html/index.html
             initWavesCanvas();
             initInkCanvas();
         });
+// ================================================================
+// SYSTÈME - INFOS EN TEMPS RÉEL
+// ================================================================
+
+function updateSystemInfo() {
+    // Horloge en temps réel
+    const now = new Date();
+    
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const timeEl = document.getElementById('sys-time');
+    if(timeEl) {
+        timeEl.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    
+    // Dernière mise à jour
+    const updateEl = document.getElementById('last-update');
+    if(updateEl) {
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        updateEl.textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    }
+}
+
+// Barre de disque visuelle
+function initDiskBar() {
+    const diskText = '$DISK';  // Valeur du bash (ex: "50G")
+    
+    // Calculer le pourcentage utilisé
+    const diskUsedPercent = parseInt('$DISK_USED_PERCENT') || 65;
+    
+    setTimeout(() => {
+        const bar = document.getElementById('disk-bar');
+        const label = document.getElementById('disk-percent');
+        
+        if(bar) {
+            bar.style.width = diskUsedPercent + '%';
+            
+            // Couleur selon l'utilisation
+            if(diskUsedPercent > 80) {
+                bar.style.background = '#8b0000';  // Rouge si plein
+            } else if(diskUsedPercent > 60) {
+                bar.style.background = '#d4af37';  // Or si moyen
+            } else {
+                bar.style.background = 'linear-gradient(135deg, #a855f7, #60a5fa)';  // Violet si ok
+            }
+        }
+        
+        if(label) {
+            label.textContent = `${diskUsedPercent}% utilisé - $DISK disponible`;
+        }
+    }, 500);
+}
+
+// Démarrer l'horloge
+setInterval(updateSystemInfo, 1000);
+updateSystemInfo();
+initDiskBar();
 
         // ================================================================
         // INTERACTIONS
