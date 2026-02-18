@@ -727,8 +727,18 @@ cat <<'EOF' > /var/www/html/index.html
         <!-- Infos statiques du bash -->
              <p><strong>🌐 IP :</strong> $IP</p>
              <p><strong>⏱️ Uptime :</strong> <span id="live-uptime">Chargement...</span></p>
-             <p><strong>💾 RAM :</strong> <span id="live-ram">0</span>%</p>
-
+    <div class="stat-item" style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <strong>💾 Utilisation RAM</strong>
+        <span id="ram-text" style="color: #d4af37; font-weight: bold;">0%</span>
+    </div>
+    
+    <div style="width: 100%; background: rgba(255,255,255,0.1); height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.3);">
+        <div id="ram-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #d4af37, #f2d06b); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); shadow: 0 0 10px rgba(212,175,55,0.5);"></div>
+    </div>
+    
+    <small id="ram-details" style="color: #888; font-size: 0.8em;">Calcul des données...</small>
+</div>
         <!-- Barre de disque visuelle -->
         <div style="margin-top: 1.5rem;">
             <p style="margin-bottom: 0.5rem;">
