@@ -725,9 +725,9 @@ cat <<'EOF' > /var/www/html/index.html
         </p>
 
         <!-- Infos statiques du bash -->
-        <p><strong>🌐 IP :</strong> $IP</p>
-        <p><strong>⏱️ Uptime :</strong> $UPTIME</p>
-        <p><strong>💾 Disque :</strong> $DISK</p>
+             <p><strong>🌐 IP :</strong> $IP</p>
+             <p><strong>⏱️ Uptime :</strong> <span id="live-uptime">Chargement...</span></p>
+             <p><strong>💾 RAM :</strong> <span id="live-ram">0</span>%</p>
 
         <!-- Barre de disque visuelle -->
         <div style="margin-top: 1.5rem;">
@@ -1217,7 +1217,25 @@ initDiskBar();
         }, { threshold: 0.15 });
 
         document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-    </script>
+function fetchLiveStats() {
+    fetch('stats.php')
+        .then(response => response.json())
+        .then(data => {
+            // Met à jour l'uptime et la RAM en direct
+            const uptimeEl = document.getElementById('live-uptime');
+            const ramEl = document.getElementById('live-ram');
+            
+            if(uptimeEl) uptimeEl.textContent = data.uptime;
+            if(ramEl) ramEl.textContent = data.ram;
+        })
+        .catch(err => console.error("Erreur de stats:", err));
+}
+
+// Lancement de la boucle temps réel
+setInterval(fetchLiveStats, 2000);
+fetchLiveStats();
+    
+     </script>
 
 </body>
 </html>
