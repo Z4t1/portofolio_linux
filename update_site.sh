@@ -8,25 +8,6 @@ IP=$(hostname -I | awk '{print $1}')
 UPTIME=$(uptime -p)
 DISK=$(df -h / | awk 'NR==2 {print $4}')
 DISK_USED_PERCENT=$(df / | awk 'NR==2 {print int($5)}')
-# --- CRÉATION DU CAPTEUR PHP ---
-sudo cat <<'EOF' > /var/www/html/stats.php
-<?php
-header('Content-Type: application/json');
-$uptime = shell_exec("uptime -p");
-$free = shell_exec("free -m");
-$lines = explode("\n", $free);
-$comps = preg_split('/\s+/', $lines[1]);
-$ram_total = $comps[1];
-$ram_used = $comps[2];
-$ram_percent = round(($ram_used / $ram_total) * 100);
-
-echo json_encode([
-    'uptime' => str_replace('up ', '', $uptime),
-    'ram' => $ram_percent,
-    'ram_used' => $ram_used,
-    'ram_total' => $ram_total
-]);
-?>
 EOF
 sudo chmod 644 /var/www/html/stats.php
 
@@ -747,18 +728,14 @@ cat <<'EOF' > /var/www/html/index.html
 
         <!-- Infos statiques du bash -->
              <p><strong>🌐 IP :</strong> $IP</p>
-<div class="system-monitor">
-    <div style="margin-top:15px;">
-        <div style="display:flex; justify-content:space-between;">
-            <strong>💾 RAM : <span id="ram-text">0%</span></strong>
-            <small id="ram-details">0 / 0 Mo</small>
-        </div>
-        <div style="width:100%; background:#333; height:12px; border-radius:10px; margin-top:5px; border:1px solid #444;">
-            <div id="ram-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #d4af37, #f2d06b); border-radius:10px; transition: width 1s ease-in-out;"></div>
-        </div>
-    </div>
+<div style="margin-top: 1.5rem;">
+    <p style="margin-bottom: 0.5rem;">
+
+<p><strong>💾 RAM :</strong> <span id="live-ram">0</span>%</p>
+<div style="width: 100%; background: rgba(255,255,255,0.1); height: 10px; border-radius: 5px; margin-top: 5px; border: 1px solid rgba(212,175,55,0.3);">
+    <div id="live-ram-bar" style="width: 0%; background: var(--gradient-gold); height: 100%; border-radius: 5px; transition: width 0.8s ease;"></div>
 </div>
-        <!-- Barre de disque visuelle -->
+       <!-- Barre de disque visuelle -->
         <div style="margin-top: 1.5rem;">
             <p style="margin-bottom: 0.5rem;">
                 <strong>📊 Utilisation Disque :</strong>
@@ -1250,31 +1227,20 @@ function fetchLiveStats() {
     fetch('stats.php')
         .then(response => response.json())
         .then(data => {
-            // Mise à jour de l'Uptime
             const uptimeEl = document.getElementById('live-uptime');
+            const ramEl = document.getElementById('live-ram');
+            const ramBar = document.getElementById('live-ram-bar'); // On récupère la barre
+
             if(uptimeEl) uptimeEl.textContent = data.uptime;
-
-            // Mise à jour de la barre de RAM
-            const ramBar = document.getElementById('live-ram-bar');
-            const ramText = document.getElementById('live-ram-text');
-            const ramDetails = document.getElementById('ram-details');
-
-            if(ramBar && ramText) {
-                ramText.textContent = data.ram + '%';
+            if(ramEl) ramEl.textContent = data.ram;
+            
+            // On fait bouger la barre !
+            if(ramBar) {
                 ramBar.style.width = data.ram + '%';
-                ramDetails.textContent = data.ram_used + " Mo / " + data.ram_total + " Mo";
-
-                // Couleur d'alerte si > 80%
-                if (data.ram > 80) ramBar.style.background = "red";
-                else ramBar.style.background = "gold";
             }
         })
         .catch(err => console.error("Erreur de stats:", err));
 }
-
-// Lancer la boucle (toutes les 2 secondes)
-setInterval(fetchLiveStats, 2000);
-fetchLiveStats(); // Appel immédiat au chargement
 
      </script>
 
