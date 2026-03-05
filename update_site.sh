@@ -3,7 +3,9 @@
 # ====================================================================
 # PORTFOLIO DORIAN - RAM live + Disque qui marchent
 # ====================================================================
-
+LOG_FILE="/home/admin-user/portfolio_dorian/deploy.log"
+DATE=$(date '+%Y-%m-%d %H:%M:%S')
+echo "[$DATE] Mise à jour effectuée par $USER" >> $LOG_FILE
 IP=$(hostname -I | awk '{print $1}')
 UPTIME=$(uptime -p)
 DISK=$(df -h / | awk 'NR==2 {print $4}')
@@ -34,7 +36,7 @@ echo json_encode([
 PHPEND
 
 chmod 644 /var/www/html/stats.php
-
+chmod 644 /var/www/html/index.html
 # Générer le HTML avec des marqueurs uniques
 cat > /var/www/html/index.html <<'HTMLEND'
 <!DOCTYPE html>
@@ -56,7 +58,7 @@ cat > /var/www/html/index.html <<'HTMLEND'
             --font-display: 'Cinzel', serif;
             --font-body: 'Inter', sans-serif;
         }
-        body {
+      body {
             font-family: var(--font-body);
             background: var(--bg-dark);
             color: var(--text-primary);
@@ -470,60 +472,64 @@ cat > /var/www/html/index.html <<'HTMLEND'
             <p>Prochainement...</p>
         </div>
     </div>
+<div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0d0a12; color:#a855f7; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:monospace; padding:20px;">
+    <div id="loader-text" style="width:100%; max-width:600px; line-height:1.5;"></div>
+</div>
 
-    <script>
-        // CONFIG SERVEUR
-        const SERVER_DATA = {
-            diskPercent: ___DISK_PERCENT___
-        };
+<script>
+const SERVER_DATA = {
+    // On ajoute des guillemets : si sed n'est pas passé, 
+    // JS voit du texte et non une variable inexistante.
+    diskPercent: parseFloat("___DISK_PERCENT___") || 0 
+};
+        let currentDropdown = null;
+        const overlay = document.createElement('div');
+        overlay.className = 'dropdown-overlay';
+        document.body.appendChild(overlay);
 
-        // HERO BACKGROUND (simplifié)
+        // 2. HERO BACKGROUND (ANIMATION PARTICULES)
         const hc = document.getElementById('hero-video-canvas');
-        const hctx = hc.getContext('2d');
-        hc.width = window.innerWidth;
-        hc.height = window.innerHeight;
-        const particles = [];
-        for(let i = 0; i < 80; i++) {
-            particles.push({
-                x: Math.random() * hc.width,
-                y: Math.random() * hc.height,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: Math.random() * 0.5 + 0.2,
-                radius: Math.random() * 50 + 15,
-                opacity: Math.random() * 0.25 + 0.1
-            });
-        }
-        function animateHero() {
-            const g = hctx.createRadialGradient(hc.width/2, hc.height/2, 0, hc.width/2, hc.height/2, hc.width/2);
-            g.addColorStop(0, '#1a1520');
-            g.addColorStop(1, '#0d0a12');
-            hctx.fillStyle = g;
-            hctx.fillRect(0, 0, hc.width, hc.height);
-            particles.forEach(function(p) {
-                p.x += p.vx;
-                p.y += p.vy;
-                if(p.y > hc.height + 100) { p.y = -100; p.x = Math.random() * hc.width; }
-                if(p.x < -100 || p.x > hc.width + 100) p.vx *= -1;
-                const pg = hctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
-                pg.addColorStop(0, 'rgba(168, 85, 247, ' + p.opacity + ')');
-                pg.addColorStop(1, 'rgba(168, 85, 247, 0)');
-                hctx.fillStyle = pg;
-                hctx.beginPath();
-                hctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                hctx.fill();
-            });
-            requestAnimationFrame(animateHero);
-        }
-        animateHero();
-        window.addEventListener('resize', function() {
+        if (hc) {
+            const hctx = hc.getContext('2d');
             hc.width = window.innerWidth;
             hc.height = window.innerHeight;
-        });
+            const particles = [];
+            for(let i = 0; i < 80; i++) {
+                particles.push({
+                    x: Math.random() * hc.width,
+                    y: Math.random() * hc.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: Math.random() * 0.5 + 0.2,
+                    radius: Math.random() * 50 + 15,
+                    opacity: Math.random() * 0.25 + 0.1
+                });
+            }
+            function animateHero() {
+                const g = hctx.createRadialGradient(hc.width/2, hc.height/2, 0, hc.width/2, hc.height/2, hc.width/2);
+                g.addColorStop(0, '#1a1520');
+                g.addColorStop(1, '#0d0a12');
+                hctx.fillStyle = g;
+                hctx.fillRect(0, 0, hc.width, hc.height);
+                particles.forEach(function(p) {
+                    p.x += p.vx; p.y += p.vy;
+                    if(p.y > hc.height + 100) { p.y = -100; p.x = Math.random() * hc.width; }
+                    if(p.x < -100 || p.x > hc.width + 100) p.vx *= -1;
+                    const pg = hctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                    pg.addColorStop(0, 'rgba(168, 85, 247, ' + p.opacity + ')');
+                    pg.addColorStop(1, 'rgba(168, 85, 247, 0)');
+                    hctx.fillStyle = pg;
+                    hctx.beginPath();
+                    hctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    hctx.fill();
+                });
+                requestAnimationFrame(animateHero);
+            }
+            animateHero();
+        }
 
-        // CANVAS TABLEAUX (ultra simplifié pour performance)
+        // 3. CANVAS TABLEAUX
         function initCanvas(id, color) {
-            const c = document.getElementById(id);
-            if(!c) return;
+            const c = document.getElementById(id); if(!c) return;
             const ctx = c.getContext('2d');
             c.width = c.offsetWidth;
             c.height = c.offsetHeight;
@@ -543,6 +549,7 @@ cat > /var/www/html/index.html <<'HTMLEND'
             }
             animate();
         }
+
         window.addEventListener('load', function() {
             initCanvas('canvas-sys', '#d4af37');
             initCanvas('canvas-projets', '#a855f7');
@@ -552,113 +559,112 @@ cat > /var/www/html/index.html <<'HTMLEND'
             initCanvas('canvas-blog', '#8b0000');
         });
 
-        // HORLOGE
+        // 4. SYSTÈME ET STATS
         function updateClock() {
             const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = now.toLocaleTimeString('fr-FR');
             const el = document.getElementById('sys-time');
-            if(el) el.textContent = h + ':' + m + ':' + s;
+            if(el) el.textContent = timeStr;
             const upd = document.getElementById('last-update');
-            if(upd) {
-                const d = String(now.getDate()).padStart(2, '0');
-                const mo = String(now.getMonth() + 1).padStart(2, '0');
-                upd.textContent = d + '/' + mo + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s;
-            }
+            if(upd) upd.textContent = now.toLocaleDateString('fr-FR') + ' ' + timeStr;
         }
         setInterval(updateClock, 1000);
-        updateClock();
 
-        // BARRE DISQUE (statique)
-        function initDiskBar() {
-            setTimeout(function() {
-                const bar = document.getElementById('disk-bar');
-                const percent = SERVER_DATA.diskPercent;
-                if(bar) {
-                    bar.style.width = percent + '%';
-                    if(percent > 80) bar.style.background = '#8b0000';
-                    else if(percent > 60) bar.style.background = '#d4af37';
-                    else bar.style.background = 'linear-gradient(135deg, #a855f7, #60a5fa)';
-                }
-            }, 300);
-        }
-        initDiskBar();
-
-        // STATS RAM EN TEMPS RÉEL
         function fetchLiveStats() {
-            fetch('stats.php')
-                .then(response => response.json())
-                .then(data => {
-                    const uptimeEl = document.getElementById('live-uptime');
-                    const ramEl = document.getElementById('live-ram');
-                    const ramBar = document.getElementById('ram-bar');
-
-                    if(uptimeEl) uptimeEl.textContent = data.uptime;
-                    if(ramEl) ramEl.textContent = data.ram;
-                    
-                    if(ramBar) {
-                        ramBar.style.width = data.ram + '%';
-                        if(data.ram > 80) ramBar.style.background = '#8b0000';
-                        else if(data.ram > 60) ramBar.style.background = '#d4af37';
-                        else ramBar.style.background = 'linear-gradient(135deg, #a855f7, #60a5fa)';
-                    }
-                })
-                .catch(err => console.error("Stats error:", err));
+            fetch('stats.php').then(r => r.json()).then(data => {
+                const uptimeEl = document.getElementById('live-uptime');
+                const ramEl = document.getElementById('live-ram');
+                const ramBar = document.getElementById('ram-bar');
+                if(uptimeEl) uptimeEl.textContent = data.uptime;
+                if(ramEl) ramEl.textContent = data.ram;
+                if(ramBar) {
+                    ramBar.style.width = data.ram + '%';
+                    ramBar.style.background = data.ram > 80 ? '#8b0000' : (data.ram > 60 ? '#d4af37' : '#a855f7');
+                }
+            }).catch(e => console.error("Stats error", e));
         }
-        
-        fetchLiveStats();
         setInterval(fetchLiveStats, 2000);
 
-        // DROPDOWNS
-        const overlay = document.createElement('div');
-        overlay.className = 'dropdown-overlay';
-        document.body.appendChild(overlay);
-        let currentDropdown = null;
+        // 5. NAVIGATION
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+            overlay.classList.remove('active');
+            currentDropdown = null;
+        }
 
         function openDropdown(id) {
             const dd = document.getElementById(id);
             if(!dd) return;
-            if(currentDropdown === dd && dd.classList.contains('active')) {
-                closeAllDropdowns();
-                return;
-            }
+            if(currentDropdown === dd) { closeAllDropdowns(); return; }
             closeAllDropdowns();
             dd.classList.add('active');
             overlay.classList.add('active');
             currentDropdown = dd;
         }
 
-        function closeAllDropdowns() {
-            document.querySelectorAll('.dropdown').forEach(function(d) { d.classList.remove('active'); });
-            overlay.classList.remove('active');
-            currentDropdown = null;
-        }
-
         overlay.addEventListener('click', closeAllDropdowns);
-        document.addEventListener('keydown', function(e) {
-            if(e.key === 'Escape') closeAllDropdowns();
-        });
-
+        function scrollToGallery() { 
+            closeAllDropdowns();
+            document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' }); 
+        }
         function scrollToTop() {
-            closeAllDropdowns(); // Fermer les dropdowns
+            closeAllDropdowns();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+const steps = [
+    "> Initialisation du Cabinet de Curiosités...",
+    "> Vérification de l'intégrité des rouages...",
+    "> Chargement de l'âme de l'Artisan...",
+    "> Accès sécurisé : DORIAN_ADMIN",
+    "> Bienvenue dans le Cabinet des Curiosités."
+];
 
-        function scrollToGallery() {
-            closeAllDropdowns(); // Fermer les dropdowns
-            document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
-        }
-    </script>
+let stepIndex = 0;
+const loaderText = document.getElementById('loader-text');
+
+function typeStep() {
+    if (stepIndex < steps.length) {
+        let p = document.createElement('p');
+        p.textContent = steps[stepIndex];
+        p.style.margin = "5px 0";
+        loaderText.appendChild(p);
+        stepIndex++;
+        setTimeout(typeStep, 600); // Vitesse entre chaque ligne
+    } else {
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 500);
+        }, 800);
+    }
+}
+
+window.addEventListener('load', typeStep);
+   
+  </script>
 </body>
 </html>
 HTMLEND
-
+if [ $? -eq 0 ]; then
+    # Liste de messages variés
+    MESSAGES=("Le Cabinet est ouvert au public !" "Les curiosités sont en ligne." "Déploiement réussi, l'Artisan." "L'ombre de Dorian plane sur le Web.")
+    # Choix aléatoire
+    SELECTED=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
+    
+    echo "[$DATE] SUCCÈS : $SELECTED" >> $LOG_FILE
+    echo "✅ $SELECTED"
+else
+    echo "[$DATE] ERREUR : Le mécanisme s'est enrayé." >> $LOG_FILE
+fi
 # Remplacement avec des marqueurs uniques
 sed -i "s/___IP___/$IP/g" /var/www/html/index.html
 sed -i "s/___UPTIME___/$UPTIME/g" /var/www/html/index.html
 sed -i "s/___DISK___/$DISK/g" /var/www/html/index.html
 sed -i "s/___DISK_PERCENT___/$DISK_USED_PERCENT/g" /var/www/html/index.html
+
+
+chmod 644 /var/www/html/index.html
 
 echo "✅ Portfolio généré avec succès !"
 echo "📊 IP: $IP"
@@ -667,3 +673,4 @@ echo "📊 Disque: $DISK ($DISK_USED_PERCENT%)"
 echo "💾 Barre RAM: Live (via PHP)"
 echo "💾 Barre Disque: Statique ($DISK_USED_PERCENT%)"
 echo "🚀 http://localhost"
+
